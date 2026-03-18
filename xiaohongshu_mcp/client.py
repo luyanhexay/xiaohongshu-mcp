@@ -430,8 +430,44 @@ class XiaohongshuClient:
             client.get_user_info,
             user_id=user_id
         )
-        
-        return {"success": True, "data": result}
+
+        basic_info = result.get("basic_info", {}) if isinstance(result, dict) else {}
+        verify_info = result.get("verify_info", {}) if isinstance(result, dict) else {}
+
+        stats: dict[str, str] = {}
+        interactions = result.get("interactions", []) if isinstance(result, dict) else []
+        if isinstance(interactions, list):
+            for item in interactions:
+                if not isinstance(item, dict):
+                    continue
+                stat_type = item.get("type", "")
+                count = item.get("count", "")
+                if stat_type:
+                    stats[stat_type] = count
+
+        tags: list[str] = []
+        raw_tags = result.get("tags", []) if isinstance(result, dict) else []
+        if isinstance(raw_tags, list):
+            for tag in raw_tags:
+                if isinstance(tag, dict):
+                    name = tag.get("name", "")
+                    if name:
+                        tags.append(name)
+
+        return {
+            "success": True,
+            "data": {
+                "user_id": user_id,
+                "nickname": basic_info.get("nickname", ""),
+                "desc": basic_info.get("desc", ""),
+                "red_id": basic_info.get("red_id", ""),
+                "ip_location": basic_info.get("ip_location", ""),
+                "gender": basic_info.get("gender", 0),
+                "verified_type": verify_info.get("red_official_verify_type", 0),
+                "stats": stats,
+                "tags": tags,
+            },
+        }
     
     async def get_user_notes(
         self,
@@ -446,8 +482,31 @@ class XiaohongshuClient:
             user_id=user_id,
             cursor=cursor
         )
-        
-        return {"success": True, "data": result}
+
+        compact_notes: list[dict[str, Any]] = []
+        for note in result.get("notes", []):
+            if not isinstance(note, dict):
+                continue
+            interact_info = note.get("interact_info", {})
+            compact_notes.append(
+                {
+                    "id": note.get("note_id", ""),
+                    "xsec_token": note.get("xsec_token", ""),
+                    "title": note.get("display_title", ""),
+                    "type": note.get("type", ""),
+                    "nickname": (note.get("user", {}) or {}).get("nickname", ""),
+                    "liked_count": (interact_info or {}).get("liked_count", "0"),
+                }
+            )
+
+        return {
+            "success": True,
+            "data": {
+                "notes": compact_notes,
+                "cursor": result.get("cursor", ""),
+                "has_more": result.get("has_more", False),
+            },
+        }
     
     async def get_user_collections(
         self,
@@ -462,8 +521,31 @@ class XiaohongshuClient:
             user_id=user_id,
             cursor=cursor
         )
-        
-        return {"success": True, "data": result}
+
+        compact_notes: list[dict[str, Any]] = []
+        for note in result.get("notes", []):
+            if not isinstance(note, dict):
+                continue
+            interact_info = note.get("interact_info", {})
+            compact_notes.append(
+                {
+                    "id": note.get("note_id", ""),
+                    "xsec_token": note.get("xsec_token", ""),
+                    "title": note.get("display_title", ""),
+                    "type": note.get("type", ""),
+                    "nickname": (note.get("user", {}) or {}).get("nickname", ""),
+                    "liked_count": (interact_info or {}).get("liked_count", "0"),
+                }
+            )
+
+        return {
+            "success": True,
+            "data": {
+                "notes": compact_notes,
+                "cursor": result.get("cursor", ""),
+                "has_more": result.get("has_more", False),
+            },
+        }
     
     async def search_users(self, keyword: str) -> dict[str, Any]:
         """Search users by keyword."""
@@ -473,8 +555,26 @@ class XiaohongshuClient:
             client.search_users,
             keyword=keyword
         )
-        
-        return {"success": True, "data": result}
+
+        users: list[dict[str, Any]] = []
+        for item in result.get("user_info_dtos", []):
+            if not isinstance(item, dict):
+                continue
+            user_base = item.get("user_base_dto", {})
+            if not isinstance(user_base, dict):
+                continue
+            users.append(
+                {
+                    "user_id": user_base.get("user_id", ""),
+                    "nickname": user_base.get("user_nickname", ""),
+                    "red_id": user_base.get("red_id", ""),
+                    "desc": user_base.get("desc", ""),
+                    "verified": user_base.get("red_official_verified", False),
+                    "verified_type": user_base.get("red_official_verify_type", 0),
+                }
+            )
+
+        return {"success": True, "data": {"users": users}}
     
     async def search_topics(self, keyword: str) -> dict[str, Any]:
         """Search topics by keyword."""
@@ -484,5 +584,19 @@ class XiaohongshuClient:
             client.search_topics,
             keyword=keyword
         )
-        
-        return {"success": True, "data": result}
+
+        topics: list[dict[str, Any]] = []
+        for topic in result.get("topic_info_dtos", []):
+            if not isinstance(topic, dict):
+                continue
+            topics.append(
+                {
+                    "id": topic.get("id", ""),
+                    "name": topic.get("name", ""),
+                    "view_num": topic.get("view_num", 0),
+                    "type": topic.get("type", ""),
+                    "link": topic.get("link", ""),
+                }
+            )
+
+        return {"success": True, "data": {"topics": topics}}
