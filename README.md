@@ -25,14 +25,27 @@
 
 ### 1. 克隆仓库
 
+推荐克隆路径：`~/.local/share/opencode/mcp-servers`
+
 ```bash
-git clone <your-repo-url>
+cd ~/.local/share/opencode/mcp-servers
+git clone https://github.com/luyanhexay/xiaohongshu-mcp.git
 cd xiaohongshu
 ```
 
-### 2. 用 `uv` 创建环境并安装依赖
+### 2. 安装 uv 并创建环境
 
-<!-- 这里需要指导用户安装uv吧？ -->
+如果尚未安装 uv，可以通过以下方式安装：
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+然后创建环境并安装依赖：
 
 ```bash
 uv sync --locked
