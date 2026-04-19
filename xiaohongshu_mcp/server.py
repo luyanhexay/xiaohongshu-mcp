@@ -22,7 +22,7 @@ async def list_tools() -> list[Tool]:
     """List available Xiaohongshu API tools."""
     return [
         Tool(
-            name="xiaohongshu_search_notes",
+            name="search_notes",
             description="搜索小红书笔记内容。支持关键词搜索、排序和类型筛选。返回精简笔记列表（id、xsec_token、标题、作者昵称、互动数据、发布时间）。",
             inputSchema={
                 "type": "object",
@@ -54,7 +54,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_search_note_suggestions",
+            name="search_note_suggestions",
             description="搜索关键词联想。返回小红书搜索结果中的推荐搜索词列表（建议词）。",
             inputSchema={
                 "type": "object",
@@ -86,7 +86,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_get_note",
+            name="get_note",
             description="获取小红书笔记详情（精简版）。返回标题、正文、作者、互动统计、发布时间及图片/视频链接。",
             inputSchema={
                 "type": "object",
@@ -106,7 +106,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_get_note_comments",
+            name="get_note_comments",
             description="获取笔记评论列表（精简版）。支持分页，返回评论内容、作者、点赞数、回复数与分页信息。",
             inputSchema={
                 "type": "object",
@@ -130,7 +130,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_get_comment_replies",
+            name="get_comment_replies",
             description="获取评论回复列表（精简版）。支持分页，返回回复内容、作者、点赞数与分页信息。",
             inputSchema={
                 "type": "object",
@@ -153,7 +153,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_get_user_info",
+            name="get_user_info",
             description="获取用户的个人资料信息。返回用户昵称、简介、粉丝数、关注数、获赞数等信息。",
             inputSchema={
                 "type": "object",
@@ -167,7 +167,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_get_user_notes",
+            name="get_user_notes",
             description="获取用户发布的笔记列表。支持分页加载。返回笔记标题、封面图、点赞数等信息。",
             inputSchema={
                 "type": "object",
@@ -186,7 +186,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_get_user_collections",
+            name="get_user_collections",
             description="获取用户收藏的笔记列表。支持分页加载。返回笔记标题、封面图、点赞数等信息。",
             inputSchema={
                 "type": "object",
@@ -205,7 +205,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_search_users",
+            name="search_users",
             description="搜索小红书用户。返回用户列表，包含昵称、简介、粉丝数等信息。",
             inputSchema={
                 "type": "object",
@@ -219,7 +219,7 @@ async def list_tools() -> list[Tool]:
             }
         ),
         Tool(
-            name="xiaohongshu_search_topics",
+            name="search_topics",
             description="搜索小红书话题。返回话题列表，包含话题名称、描述、参与人数等信息。",
             inputSchema={
                 "type": "object",
@@ -233,15 +233,15 @@ async def list_tools() -> list[Tool]:
             }
         ),
         # Tool(
-        #     name="xiaohongshu_login_start",
+        #     name="login_start",
         #     description="""小红书扫码登录第一步：生成二维码。
         #
         # 返回 qr_text 字段，内容为可直接打印的 Unicode 二维码，将其原样输出给用户扫码。
-        # 调用后必须立即调用 xiaohongshu_login_poll 等待扫码结果。
+        # 调用后必须立即调用 login_poll 等待扫码结果。
         #
         # 工作流：
-        # 1. 调用 xiaohongshu_login_start → 将 qr_text 原样输出给用户
-        # 2. 立即调用 xiaohongshu_login_poll → 等待用户扫码（最多2分钟）""",
+        # 1. 调用 login_start → 将 qr_text 原样输出给用户
+        # 2. 立即调用 login_poll → 等待用户扫码（最多2分钟）""",
         #     inputSchema={
         #         "type": "object",
         #         "properties": {},
@@ -249,13 +249,13 @@ async def list_tools() -> list[Tool]:
         #     }
         # ),
         # Tool(
-        #     name="xiaohongshu_login_poll",
+        #     name="login_poll",
         #     description="""小红书扫码登录第二步：等待用户扫码确认。
         #
-        # 必须在调用 xiaohongshu_login_start 之后立即调用本工具。
+        # 必须在调用 login_start 之后立即调用本工具。
         # 本工具会阻塞轮询最多2分钟，直到用户扫码成功或超时。
         # - 成功：返回 success=true，登录完成，可正常使用其他工具
-        # - 超时：返回 success=false，需重新调用 xiaohongshu_login_start 获取新二维码""",
+        # - 超时：返回 success=false，需重新调用 login_start 获取新二维码""",
         #     inputSchema={
         #         "type": "object",
         #         "properties": {},
@@ -263,7 +263,7 @@ async def list_tools() -> list[Tool]:
         #     }
         # ),
         Tool(
-            name="xiaohongshu_set_cookies",
+            name="set_cookies",
             description="""手动设置小红书登录 Cookie。
 
 从浏览器 DevTools 复制 Cookie 后调用此工具完成登录，无需扫码。
@@ -294,7 +294,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
         client = XiaohongshuClient()
         
         match name:
-            case "xiaohongshu_search_notes":
+            case "search_notes":
                 # Validate required parameters
                 keyword = arguments.get("keyword")
                 if not keyword:
@@ -322,7 +322,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
 
-            case "xiaohongshu_search_note_suggestions":
+            case "search_note_suggestions":
                 keyword = arguments.get("keyword")
                 if not keyword:
                     raise McpError(ErrorData(
@@ -346,7 +346,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_get_note":
+            case "get_note":
                 # Validate required parameters
                 note_id = arguments.get("note_id")
                 if not note_id:
@@ -369,7 +369,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_get_note_comments":
+            case "get_note_comments":
                 note_id = arguments.get("note_id")
                 if not note_id:
                     raise McpError(ErrorData(
@@ -390,7 +390,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_get_comment_replies":
+            case "get_comment_replies":
                 note_id = arguments.get("note_id")
                 comment_id = arguments.get("comment_id")
                 if not note_id or not comment_id:
@@ -411,7 +411,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_get_user_info":
+            case "get_user_info":
                 user_id = arguments.get("user_id")
                 if not user_id:
                     raise McpError(ErrorData(
@@ -426,7 +426,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_get_user_notes":
+            case "get_user_notes":
                 user_id = arguments.get("user_id")
                 if not user_id:
                     raise McpError(ErrorData(
@@ -442,7 +442,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_get_user_collections":
+            case "get_user_collections":
                 user_id = arguments.get("user_id")
                 if not user_id:
                     raise McpError(ErrorData(
@@ -458,7 +458,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_search_users":
+            case "search_users":
                 keyword = arguments.get("keyword")
                 if not keyword:
                     raise McpError(ErrorData(
@@ -473,7 +473,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            case "xiaohongshu_search_topics":
+            case "search_topics":
                 keyword = arguments.get("keyword")
                 if not keyword:
                     raise McpError(ErrorData(
@@ -488,21 +488,21 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     text=json.dumps(result, ensure_ascii=False, indent=2)
                 )]
             
-            # case "xiaohongshu_login_start":
+            # case "login_start":
             #     result = await client.login_qr_start()
             #     return [TextContent(
             #         type="text",
             #         text=json.dumps(result, ensure_ascii=False, indent=2)
             #     )]
 
-            # case "xiaohongshu_login_poll":
+            # case "login_poll":
             #     result = await client.login_qr_poll()
             #     return [TextContent(
             #         type="text",
             #         text=json.dumps(result, ensure_ascii=False, indent=2)
             #     )]
 
-            case "xiaohongshu_set_cookies":
+            case "set_cookies":
                 cookies_input = arguments.get("cookies")
                 if not cookies_input:
                     raise McpError(ErrorData(
@@ -538,10 +538,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
         # Provide helpful error messages for common issues
         if "SessionExpiredError" in error_type or "session expired" in error_msg.lower() or "登录" in error_msg:
             error_msg = (
-                "Cookie 已过期。请引导用户运行 'xiaohongshu_set_cookies' 工具重新设置 Cookie。"
+                "Cookie 已过期。请引导用户运行 'set_cookies' 工具重新设置 Cookie。"
             )
         elif "cookie" in error_msg.lower():
-            error_msg = f"Cookie 获取失败: {error_msg}. 请引导用户运行 'xiaohongshu_set_cookies' 工具。"
+            error_msg = f"Cookie 获取失败: {error_msg}. 请引导用户运行 'set_cookies' 工具。"
         elif "验证" in error_msg or "verify" in error_msg.lower():
             error_msg = "需要验证码或账号被风控。请引导用户在浏览器完成验证，然后重新设置 Cookie。"
         elif "429" in error_msg or "频繁" in error_msg:
