@@ -4,121 +4,41 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Any
+
 from xhs_cli.client import XhsClient
 from xhs_cli.cookies import get_cookies
-
-_qr_session: dict[str, Any] = {}
 
 
 class XiaohongshuClient:
     """Async wrapper for xiaohongshu-cli library."""
-    
+
     def __init__(self):
         """Initialize client with auto cookie extraction."""
         self._client = None
-    
+
     def _load_cookies(self) -> dict[str, str]:
         """Load cookies from file or browser."""
         cookie_file = Path(__file__).parent.parent / "cookies.json"
-        
+
         if cookie_file.exists():
             try:
                 with open(cookie_file) as f:
                     return json.load(f)
             except Exception:
                 pass
-        
+
         try:
             _, cookies = get_cookies()
             return cookies
         except Exception:
             return {}
-    
+
     def _get_client(self) -> XhsClient:
         """Lazy initialize client."""
         if self._client is None:
             cookies = self._load_cookies()
             self._client = XhsClient(cookies=cookies)
         return self._client
-    
-    # async def login_qr_start(self) -> dict[str, Any]:
-    #     global _qr_session
-    #     try:
-    #         a1 = "".join(random.choices("0123456789abcdef", k=24)) + str(int(time.time() * 1000)) + "".join(random.choices("0123456789abcdef", k=15))
-    #         webid = "".join(random.choices("0123456789abcdef", k=32))
-    #         tmp_cookies = {"a1": a1, "webId": webid}
-    #         client = XhsClient(tmp_cookies, request_delay=0)
-    #
-    #         qr_data = await asyncio.to_thread(client.create_qr_login)
-    #         qr_id = qr_data["qr_id"]
-    #         code = qr_data["code"]
-    #         qr_url = qr_data["url"]
-    #
-    #         qr = qrcode.QRCode(error_correction=ERROR_CORRECT_L, border=1)
-    #         qr.add_data(qr_url)
-    #         qr.make(fit=True)
-    #         matrix = qr.get_matrix()
-    #         lines = []
-    #         for i in range(0, len(matrix) - 1, 2):
-    #             row = ""
-    #             for j in range(len(matrix[i])):
-    #                 top = matrix[i][j]
-    #                 bot = matrix[i + 1][j] if i + 1 < len(matrix) else False
-    #                 if top and bot:
-    #                     row += "█"
-    #                 elif top:
-    #                     row += "▀"
-    #                 elif bot:
-    #                     row += "▄"
-    #                 else:
-    #                     row += " "
-    #             lines.append(row)
-    #         qr_text = "\n".join(lines)
-    #
-    #         _qr_session = {"client": client, "qr_id": qr_id, "code": code, "a1": a1, "webid": webid}
-    #         return {"success": True, "qr_text": qr_text, "qr_url": qr_url}
-    #     except Exception as e:
-    #         return {"success": False, "message": f"创建二维码失败: {str(e)}"}
-
-    # async def login_qr_poll(self) -> dict[str, Any]:
-    #     global _qr_session
-    #     if not _qr_session:
-    #         return {"success": False, "message": "未找到登录会话，请先调用 xiaohongshu_login_start"}
-    #
-    #     client: XhsClient = _qr_session["client"]
-    #     qr_id = _qr_session["qr_id"]
-    #     code = _qr_session["code"]
-    #     a1 = _qr_session["a1"]
-    #     webid = _qr_session["webid"]
-    #
-    #     try:
-    #         deadline = time.time() + 120
-    #         while time.time() < deadline:
-    #             status = await asyncio.to_thread(client.check_qr_status, qr_id, code)
-    #             code_status = status.get("codeStatus", -1)
-    #
-    #             if code_status == 2:
-    #                 await asyncio.to_thread(client.complete_qr_login, qr_id, code)
-    #                 cookies = {
-    #                     "a1": a1,
-    #                     "webId": webid,
-    #                     "web_session": client.cookies.get("web_session", ""),
-    #                     "web_session_sec": client.cookies.get("web_session_sec", ""),
-    #                 }
-    #                 cookie_file = Path(__file__).parent.parent / "cookies.json"
-    #                 with open(cookie_file, "w") as f:
-    #                     json.dump(cookies, f, indent=2)
-    #                 self._client = XhsClient(cookies=cookies)
-    #                 _qr_session = {}
-    #                 return {"success": True, "message": "登录成功"}
-    #
-    #             await asyncio.sleep(2)
-    #
-    #         _qr_session = {}
-    #         return {"success": False, "message": "登录超时（2分钟），请重新调用 xiaohongshu_login_start 获取新二维码"}
-    #     except Exception as e:
-    #         _qr_session = {}
-    #         return {"success": False, "message": f"登录出错: {str(e)}"}
 
     async def set_cookies(self, cookies_input: str) -> dict[str, Any]:
         try:
@@ -133,7 +53,10 @@ class XiaohongshuClient:
                         cookies[k.strip()] = v.strip()
 
             if not cookies:
-                return {"success": False, "message": "无法解析 cookies，请提供 JSON 对象或 Cookie 请求头字符串"}
+                return {
+                    "success": False,
+                    "message": "无法解析 cookies，请提供 JSON 对象或 Cookie 请求头字符串",
+                }
 
             cookie_file = Path(__file__).parent.parent / "cookies.json"
             with open(cookie_file, "w") as f:
@@ -145,19 +68,18 @@ class XiaohongshuClient:
                 await asyncio.to_thread(self._client.get_self_info)
                 return {"success": True, "message": "Cookie 有效，登录成功"}
             except Exception:
-                return {"success": False, "message": "Cookie 已保存，但验证失败，可能已过期或无效"}
+                return {
+                    "success": False,
+                    "message": "Cookie 已保存，但验证失败，可能已过期或无效",
+                }
         except Exception as e:
             return {"success": False, "message": f"保存失败: {str(e)}"}
 
     async def search_notes(
-        self,
-        keyword: str,
-        page: int = 1,
-        sort: str = "general",
-        note_type: int = 0
+        self, keyword: str, page: int = 1, sort: str = "general", note_type: int = 0
     ) -> dict[str, Any]:
         """Search notes by keyword.
-        
+
         Args:
             keyword: Search keyword
             page: Page number (starts from 1)
@@ -165,16 +87,16 @@ class XiaohongshuClient:
             note_type: 0=all, 1=video, 2=image
         """
         client = self._get_client()
-        
+
         type_map = {0: 0, 1: 1, 2: 2}
         mapped_type = type_map.get(note_type, 0)
-        
+
         result = await asyncio.to_thread(
             client.search_notes,
             keyword=keyword,
             page=page,
             sort=sort,
-            note_type=mapped_type
+            note_type=mapped_type,
         )
 
         compact_items: list[dict[str, Any]] = []
@@ -253,23 +175,20 @@ class XiaohongshuClient:
                 "suggestions": suggestions,
             },
         }
-    
+
     async def get_note_image(self, note_id: str) -> dict[str, Any]:
         """Get image note details."""
         return await self._get_note_detail(note_id)
-    
+
     async def get_note_video(self, note_id: str) -> dict[str, Any]:
         """Get video note details."""
         return await self._get_note_detail(note_id)
-    
+
     async def _get_note_detail(self, note_id: str) -> dict[str, Any]:
         """Get note details (works for both image and video)."""
         client = self._get_client()
-        
-        result = await asyncio.to_thread(
-            client.get_note_by_id,
-            note_id=note_id
-        )
+
+        result = await asyncio.to_thread(client.get_note_by_id, note_id=note_id)
 
         note_item: dict[str, Any] = {}
         if isinstance(result, dict):
@@ -279,12 +198,18 @@ class XiaohongshuClient:
                 if isinstance(first_item, dict):
                     note_item = first_item
 
-        note_card = note_item.get("note_card", {}) if isinstance(note_item, dict) else {}
+        note_card = (
+            note_item.get("note_card", {}) if isinstance(note_item, dict) else {}
+        )
         user = note_card.get("user", {}) if isinstance(note_card, dict) else {}
-        interact_info = note_card.get("interact_info", {}) if isinstance(note_card, dict) else {}
+        interact_info = (
+            note_card.get("interact_info", {}) if isinstance(note_card, dict) else {}
+        )
 
         images: list[str] = []
-        image_list = note_card.get("image_list", []) if isinstance(note_card, dict) else []
+        image_list = (
+            note_card.get("image_list", []) if isinstance(note_card, dict) else []
+        )
         if isinstance(image_list, list):
             for image in image_list:
                 if not isinstance(image, dict):
@@ -336,21 +261,15 @@ class XiaohongshuClient:
                 "video_url": video_url,
             },
         }
-    
+
     async def get_note_comments(
-        self,
-        note_id: str,
-        cursor: str = "",
-        xsec_token: str = ""
+        self, note_id: str, cursor: str = "", xsec_token: str = ""
     ) -> dict[str, Any]:
         """Get note comments with pagination."""
         client = self._get_client()
-        
+
         result = await asyncio.to_thread(
-            client.get_comments,
-            note_id=note_id,
-            cursor=cursor,
-            xsec_token=xsec_token
+            client.get_comments, note_id=note_id, cursor=cursor, xsec_token=xsec_token
         )
 
         compact_comments: list[dict[str, Any]] = []
@@ -362,8 +281,12 @@ class XiaohongshuClient:
                 {
                     "id": comment.get("id", ""),
                     "content": comment.get("content", ""),
-                    "nickname": user_info.get("nickname", "") if isinstance(user_info, dict) else "",
-                    "user_id": user_info.get("user_id", "") if isinstance(user_info, dict) else "",
+                    "nickname": user_info.get("nickname", "")
+                    if isinstance(user_info, dict)
+                    else "",
+                    "user_id": user_info.get("user_id", "")
+                    if isinstance(user_info, dict)
+                    else "",
                     "like_count": comment.get("like_count", "0"),
                     "sub_comment_count": comment.get("sub_comment_count", "0"),
                     "create_time": comment.get("create_time", 0),
@@ -379,21 +302,18 @@ class XiaohongshuClient:
                 "has_more": result.get("has_more", False),
             },
         }
-    
+
     async def get_comment_replies(
-        self,
-        note_id: str,
-        comment_id: str,
-        cursor: str = ""
+        self, note_id: str, comment_id: str, cursor: str = ""
     ) -> dict[str, Any]:
         """Get replies to a specific comment."""
         client = self._get_client()
-        
+
         result = await asyncio.to_thread(
             client.get_sub_comments,
             note_id=note_id,
             root_comment_id=comment_id,
-            cursor=cursor
+            cursor=cursor,
         )
 
         compact_replies: list[dict[str, Any]] = []
@@ -405,8 +325,12 @@ class XiaohongshuClient:
                 {
                     "id": reply.get("id", ""),
                     "content": reply.get("content", ""),
-                    "nickname": user_info.get("nickname", "") if isinstance(user_info, dict) else "",
-                    "user_id": user_info.get("user_id", "") if isinstance(user_info, dict) else "",
+                    "nickname": user_info.get("nickname", "")
+                    if isinstance(user_info, dict)
+                    else "",
+                    "user_id": user_info.get("user_id", "")
+                    if isinstance(user_info, dict)
+                    else "",
                     "like_count": reply.get("like_count", "0"),
                     "create_time": reply.get("create_time", 0),
                     "ip_location": reply.get("ip_location", ""),
@@ -421,21 +345,20 @@ class XiaohongshuClient:
                 "has_more": result.get("has_more", False),
             },
         }
-    
+
     async def get_user_info(self, user_id: str) -> dict[str, Any]:
         """Get user profile information."""
         client = self._get_client()
-        
-        result = await asyncio.to_thread(
-            client.get_user_info,
-            user_id=user_id
-        )
+
+        result = await asyncio.to_thread(client.get_user_info, user_id=user_id)
 
         basic_info = result.get("basic_info", {}) if isinstance(result, dict) else {}
         verify_info = result.get("verify_info", {}) if isinstance(result, dict) else {}
 
         stats: dict[str, str] = {}
-        interactions = result.get("interactions", []) if isinstance(result, dict) else []
+        interactions = (
+            result.get("interactions", []) if isinstance(result, dict) else []
+        )
         if isinstance(interactions, list):
             for item in interactions:
                 if not isinstance(item, dict):
@@ -468,19 +391,13 @@ class XiaohongshuClient:
                 "tags": tags,
             },
         }
-    
-    async def get_user_notes(
-        self,
-        user_id: str,
-        cursor: str = ""
-    ) -> dict[str, Any]:
+
+    async def get_user_notes(self, user_id: str, cursor: str = "") -> dict[str, Any]:
         """Get notes published by user."""
         client = self._get_client()
-        
+
         result = await asyncio.to_thread(
-            client.get_user_notes,
-            user_id=user_id,
-            cursor=cursor
+            client.get_user_notes, user_id=user_id, cursor=cursor
         )
 
         compact_notes: list[dict[str, Any]] = []
@@ -507,19 +424,15 @@ class XiaohongshuClient:
                 "has_more": result.get("has_more", False),
             },
         }
-    
+
     async def get_user_collections(
-        self,
-        user_id: str,
-        cursor: str = ""
+        self, user_id: str, cursor: str = ""
     ) -> dict[str, Any]:
         """Get notes collected/favorited by user."""
         client = self._get_client()
-        
+
         result = await asyncio.to_thread(
-            client.get_user_favorites,
-            user_id=user_id,
-            cursor=cursor
+            client.get_user_favorites, user_id=user_id, cursor=cursor
         )
 
         compact_notes: list[dict[str, Any]] = []
@@ -546,15 +459,12 @@ class XiaohongshuClient:
                 "has_more": result.get("has_more", False),
             },
         }
-    
+
     async def search_users(self, keyword: str) -> dict[str, Any]:
         """Search users by keyword."""
         client = self._get_client()
-        
-        result = await asyncio.to_thread(
-            client.search_users,
-            keyword=keyword
-        )
+
+        result = await asyncio.to_thread(client.search_users, keyword=keyword)
 
         users: list[dict[str, Any]] = []
         for item in result.get("user_info_dtos", []):
@@ -575,15 +485,12 @@ class XiaohongshuClient:
             )
 
         return {"success": True, "data": {"users": users}}
-    
+
     async def search_topics(self, keyword: str) -> dict[str, Any]:
         """Search topics by keyword."""
         client = self._get_client()
-        
-        result = await asyncio.to_thread(
-            client.search_topics,
-            keyword=keyword
-        )
+
+        result = await asyncio.to_thread(client.search_topics, keyword=keyword)
 
         topics: list[dict[str, Any]] = []
         for topic in result.get("topic_info_dtos", []):

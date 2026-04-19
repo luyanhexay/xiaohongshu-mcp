@@ -1,210 +1,208 @@
 # 小红书 MCP Server
 
-基于 [xiaohongshu-cli](https://github.com/jackwener/xiaohongshu-cli) 的 MCP (Model Context Protocol) 服务器，为 OpenCode 提供小红书数据访问能力。
+基于 [xiaohongshu-cli](https://github.com/jackwener/xiaohongshu-cli) 的 MCP Server，为 MCP 客户端提供小红书搜索、详情、评论和用户数据读取能力。
 
-## ✨ 特性
+## 能力概览
 
-- 🔍 **搜索笔记** - 关键词搜索，支持排序和类型过滤
-- 📝 **笔记详情** - 获取完整内容、图片/视频、互动数据
-- 💬 **评论系统** - 获取评论和子评论（支持分页）
-- 👤 **用户信息** - 用户资料、发布笔记、收藏列表
-- 🔎 **搜索用户/话题** - 发现博主和热门话题
-- 🆓 **完全免费** - 基于开源库，无 API 调用费用
-- 🔒 **隐私安全** - Cookie 本地存储，不上传第三方
+- `search_notes`：搜索笔记
+- `search_note_suggestions`：获取搜索联想词
+- `get_note`：获取笔记详情
+- `get_note_comments`：获取评论列表
+- `get_comment_replies`：获取评论回复
+- `get_user_info`：获取用户资料
+- `get_user_notes`：获取用户发布的笔记
+- `get_user_collections`：获取用户收藏的笔记
+- `search_users`：搜索用户
+- `search_topics`：搜索话题
+- `set_cookies`：保存并验证登录 Cookie
 
-## 📦 安装
+## 环境要求
 
-### 前置要求
+- Python `3.10+`
+- [uv](https://github.com/astral-sh/uv)
 
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (推荐) 或 pip
+## Quick Start
 
-### 安装步骤
+### 1. 克隆仓库
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/你的用户名/xiaohongshu-mcp.git
-cd xiaohongshu-mcp
+git clone <your-repo-url>
+cd xiaohongshu
+```
 
-# 2. 创建虚拟环境并安装依赖
-uv venv venv
-uv pip install --python venv/bin/python -e .
-uv pip install --python venv/bin/python xiaohongshu-cli
+### 2. 用 `uv` 创建环境并安装依赖
 
-# 3. 配置 Cookie
-# 从浏览器获取 Cookie（见下方说明）
-cat > cookies.json << 'EOF'
-{
-  "web_session": "你的web_session",
-  "a1": "你的a1",
-  "webId": "你的webId"
-}
-EOF
+<!-- 这里需要指导用户安装uv吧？ -->
 
-# 4. 配置 OpenCode
-# 在 ~/.config/opencode/opencode.json 的 mcpServers 中添加：
+```bash
+uv sync --locked
+```
+
+### 3. 在 MCP 客户端里注册这个服务
+
+以 OpenCode 为例，在 `~/.config/opencode/opencode.json` 的 `mcpServers` 中添加：
+
+```json
 {
   "xiaohongshu": {
     "type": "local",
-    "command": ["/绝对路径/xiaohongshu-mcp/venv/bin/python", "-m", "xiaohongshu_mcp.server"],
+    "command": [
+      "/absolute/path/to/xiaohongshu/.venv/bin/python",
+      "-m",
+      "xiaohongshu_mcp.server"
+    ],
     "environment": {
-      "PYTHONPATH": "/绝对路径/xiaohongshu-mcp"
+      "PYTHONPATH": "/absolute/path/to/xiaohongshu"
     },
     "enabled": true
   }
 }
 ```
 
-### 获取 Cookie
+### 4. 准备 Cookie
 
-1. 在浏览器中访问 https://www.xiaohongshu.com/ 并登录
-2. 按 F12 打开开发者工具 → Application/存储 → Cookies → https://www.xiaohongshu.com
-3. 复制以下三个 Cookie 的值：
-   - `web_session`
-   - `a1`
-   - `webId`
-4. 粘贴到 `cookies.json` 文件中
+先在浏览器中登录小红书，然后打开 DevTools 的 Cookie 面板：
 
-**Cookie 有效期：** 约 7 天，过期后重新获取即可。
+![DevTools-应用程序-Cookie](docs/assets/cookie-tutorial.png)
 
-## 🔧 可用工具
+复制`a1`、`web_session`和`webId`三个字段，然后直接对 AI 助手说：
 
-### 笔记相关
-
-#### `xiaohongshu_search_notes` - 搜索笔记
-搜索小红书笔记，支持关键词、排序和类型筛选。
-
-**参数：**
-- `keyword` (必填): 搜索关键词
-- `page` (可选): 页码，默认 1
-- `sort` (可选): 排序方式
-  - `general`: 综合排序（默认）
-  - `time_descending`: 最新发布
-  - `popularity_descending`: 最热门
-- `note_type` (可选): 笔记类型
-  - `0`: 全部类型（默认）
-  - `1`: 仅视频
-  - `2`: 仅图文
-
-#### `xiaohongshu_get_note` - 获取笔记详情
-获取笔记的完整内容、图片/视频 URL、作者信息、互动数据。
-
-**参数：**
-- `note_id` (必填): 笔记 ID
-- `note_type` (可选): `image` 或 `video`，默认 `image`
-
-#### `xiaohongshu_get_note_comments` - 获取笔记评论
-获取笔记的评论列表，支持分页。
-
-**参数：**
-- `note_id` (必填): 笔记 ID
-- `cursor` (可选): 分页游标
-- `xsec_token` (可选): 安全令牌（从搜索结果获取）
-
-#### `xiaohongshu_get_comment_replies` - 获取评论回复
-获取某条评论的子评论列表，支持分页。
-
-**参数：**
-- `note_id` (必填): 笔记 ID
-- `comment_id` (必填): 评论 ID
-- `cursor` (可选): 分页游标
-
-### 用户相关
-
-#### `xiaohongshu_get_user_info` - 获取用户资料
-获取用户昵称、简介、粉丝数、关注数、获赞数。
-
-**参数：**
-- `user_id` (必填): 用户 ID
-
-#### `xiaohongshu_get_user_notes` - 获取用户笔记
-获取用户发布的笔记列表，支持分页。
-
-**参数：**
-- `user_id` (必填): 用户 ID
-- `cursor` (可选): 分页游标
-
-#### `xiaohongshu_get_user_collections` - 获取用户收藏
-获取用户收藏的笔记列表，支持分页。
-
-**参数：**
-- `user_id` (必填): 用户 ID
-- `cursor` (可选): 分页游标
-
-### 搜索相关
-
-#### `xiaohongshu_search_users` - 搜索用户
-按关键词搜索用户。
-
-**参数：**
-- `keyword` (必填): 搜索关键词
-
-#### `xiaohongshu_search_topics` - 搜索话题
-按关键词搜索话题。
-
-**参数：**
-- `keyword` (必填): 搜索关键词
-
-## 🚀 使用示例
-
-在 OpenCode 中与 AI 对话：
-
-```
-# 搜索笔记
-帮我搜索小红书上关于"旅游攻略"的热门笔记
-
-# 获取笔记详情
-获取这条笔记的详细内容：697c0eee000000000a03c308
-
-# 获取评论
-获取这条笔记的评论：66f906a5000000001b022fc4
-
-# 搜索用户
-搜索小红书上的"美妆博主"
-
-# 组合使用
-搜索"美食推荐"，然后获取第一条笔记的详情和评论
+```text
+请调用 set_cookies 工具，并设置这段 Cookie：a1=...; web_session=...; webId=...
 ```
 
-## ⚠️ 常见问题
+`set_cookies` 会把 Cookie 保存到本地的 `cookies.json`，然后立即做一次有效性验证。
 
-### Cookie 过期
+当然，也可以直接把整个Cookie全选复制给Agent，让它自己解析。
 
-**现象：** 返回错误 "Cookie 已过期"
+另一种方式是把 Cookie 按照 `cookies.example.json` 的格式保存到一个 JSON 文件里，然后让 Agent 读取这个文件的内容并调用 `set_cookies`。内容格式如下：
 
-**解决：** 按照上方"获取 Cookie"步骤重新获取并更新 `cookies.json`
-
-### 需要验证码
-
-**现象：** 返回 "需要验证码或账号被风控"
-
-**解决：** 在浏览器中完成验证后重试
-
-### 请求频繁
-
-**现象：** 返回 "请求过于频繁"
-
-**解决：** 等待几秒后重试
-
-## 📝 项目结构
-
+```json
+{
+  "a1": "your-a1-cookie",
+  "web_session": "your-web-session-cookie",
+  "webId": "your-web-id-cookie"
+}
 ```
-xiaohongshu-mcp/
-├── .gitignore              # Git 忽略文件
-├── pyproject.toml          # 项目配置
-├── README.md               # 本文档
-├── cookies.json            # Cookie 配置（不提交到 Git）
-├── venv/                   # 虚拟环境（不提交到 Git）
+
+### 5. 自检 / 健康检查
+
+完成配置后，请直接向 AI 助手提问：
+
+```text
+请在小红书上搜索今日美食。
+```
+
+如果 MCP 服务已经被正确加载，AI 助手应当能够调用 `search_notes` 并返回结果。
+
+## 工具说明
+
+### `search_notes`
+
+搜索小红书笔记。
+
+- 必填参数：`keyword`
+- 可选参数：`page`、`sort`、`note_type`
+
+### `search_note_suggestions`
+
+获取某个关键词的搜索联想词。
+
+- 必填参数：`keyword`
+- 可选参数：`page`、`sort`、`note_type`
+
+### `get_note`
+
+获取某条笔记的精简详情。
+
+- 必填参数：`note_id`
+- 可选参数：`note_type`
+
+### `get_note_comments`
+
+获取笔记评论列表。
+
+- 必填参数：`note_id`
+- 可选参数：`cursor`、`xsec_token`
+
+### `get_comment_replies`
+
+获取某条评论的回复。
+
+- 必填参数：`note_id`、`comment_id`
+- 可选参数：`cursor`
+
+### `get_user_info`
+
+获取用户资料。
+
+- 必填参数：`user_id`
+
+### `get_user_notes`
+
+获取用户发布的笔记。
+
+- 必填参数：`user_id`
+- 可选参数：`cursor`
+
+### `get_user_collections`
+
+获取用户收藏的笔记。
+
+- 必填参数：`user_id`
+- 可选参数：`cursor`
+
+### `search_users`
+
+搜索用户。
+
+- 必填参数：`keyword`
+
+### `search_topics`
+
+搜索话题。
+
+- 必填参数：`keyword`
+
+### `set_cookies`
+
+保存并验证 Cookie。
+
+- 必填参数：`cookies`
+- 支持 JSON 字符串
+- 支持 Cookie 请求头字符串
+
+## 一些已知问题和提示
+
+- 有时候小红书会要求进行人类验证，导致检索失败。此时让Agent简单地再次尝试调用一次同一个工具就好。
+
+## 项目文件
+
+```text
+xiaohongshu/
+├── .gitignore
+├── cookies.example.json
+├── docs/
+│   └── assets/
+│       └── cookie-tutorial.png
+├── LICENSE
+├── pyproject.toml
+├── README.md
 └── xiaohongshu_mcp/
     ├── __init__.py
-    ├── server.py           # MCP 服务器主逻辑
-    └── client.py           # xiaohongshu-cli 封装
+    ├── client.py
+    └── server.py
 ```
 
-## 🙏 致谢
+## 未来可能支持的功能
 
-- [xiaohongshu-cli](https://github.com/jackwener/xiaohongshu-cli) - 提供核心功能
-- [MCP](https://modelcontextprotocol.io/) - Model Context Protocol
+- [ ] 扫码登录
+- [ ] 在触发人类验证时自动重试
+
+## 致谢
+
+- [xiaohongshu-cli](https://github.com/jackwener/xiaohongshu-cli)
+- [MCP](https://modelcontextprotocol.io/)
 
 ## 📄 License
 
