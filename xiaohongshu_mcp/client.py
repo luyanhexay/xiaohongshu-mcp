@@ -6,7 +6,31 @@ from pathlib import Path
 from typing import Any
 
 from xhs_cli.client import XhsClient
-from xhs_cli.cookies import get_cookies
+from xhs_cli.cookies import cache_note_context, get_cookies
+
+
+def _first_text(*values: Any) -> str:
+    """Return the first non-empty value as text."""
+    for value in values:
+        if value is None:
+            continue
+        text = str(value)
+        if text:
+            return text
+    return ""
+
+
+def _first_value(*values: Any) -> Any:
+    """Return the first non-empty value without coercion."""
+    for value in values:
+        if value not in (None, ""):
+            return value
+    return ""
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    """Return value if it is a dictionary, otherwise an empty dictionary."""
+    return value if isinstance(value, dict) else {}
 
 
 class XiaohongshuClient:
@@ -107,6 +131,11 @@ class XiaohongshuClient:
             note_card = item.get("note_card", {})
             interact_info = note_card.get("interact_info", {})
             user = note_card.get("user", {})
+            note_id = _first_text(item.get("id"), note_card.get("note_id"), note_card.get("noteId"))
+            xsec_token = _first_text(item.get("xsec_token"), note_card.get("xsec_token"), note_card.get("xsecToken"))
+
+            if note_id and xsec_token:
+                cache_note_context(note_id, xsec_token, "pc_search", context="search_notes")
 
             publish_time_text = ""
             corner_tag_info = note_card.get("corner_tag_info", [])
@@ -117,8 +146,9 @@ class XiaohongshuClient:
 
             compact_items.append(
                 {
-                    "id": item.get("id", ""),
-                    "xsec_token": item.get("xsec_token", ""),
+                    "id": note_id,
+                    "xsec_token": xsec_token,
+                    "xsec_source": "pc_search" if xsec_token else "",
                     "title": note_card.get("display_title", ""),
                     "nickname": user.get("nickname", ""),
                     "interact_info": {
@@ -176,19 +206,30 @@ class XiaohongshuClient:
             },
         }
 
-    async def get_note_image(self, note_id: str) -> dict[str, Any]:
+    async def get_note_image(
+        self, note_id: str, xsec_token: str = "", xsec_source: str = ""
+    ) -> dict[str, Any]:
         """Get image note details."""
-        return await self._get_note_detail(note_id)
+        return await self._get_note_detail(note_id, xsec_token, xsec_source)
 
-    async def get_note_video(self, note_id: str) -> dict[str, Any]:
+    async def get_note_video(
+        self, note_id: str, xsec_token: str = "", xsec_source: str = ""
+    ) -> dict[str, Any]:
         """Get video note details."""
-        return await self._get_note_detail(note_id)
+        return await self._get_note_detail(note_id, xsec_token, xsec_source)
 
-    async def _get_note_detail(self, note_id: str) -> dict[str, Any]:
-        """Get note details (works for both image and video)."""
+    async def _get_note_detail(
+        self, note_id: str, xsec_token: str = "", xsec_source: str = ""
+    ) -> dict[str, Any]:
+        """Get note details via xiaohongshu-cli token resolution."""
         client = self._get_client()
 
-        result = await asyncio.to_thread(client.get_note_by_id, note_id=note_id)
+        result = await asyncio.to_thread(
+            client.get_note_detail,
+            note_id=note_id,
+            xsec_token=xsec_token,
+            xsec_source=xsec_source,
+        )
 
         note_item: dict[str, Any] = {}
         if isinstance(result, dict):
@@ -197,24 +238,31 @@ class XiaohongshuClient:
                 first_item = items[0]
                 if isinstance(first_item, dict):
                     note_item = first_item
+            elif isinstance(result.get("note_card"), dict):
+                note_item = result
+            else:
+                note_item = {"id": note_id, "note_card": result}
 
-        note_card = (
-            note_item.get("note_card", {}) if isinstance(note_item, dict) else {}
+        note_card = _as_dict(note_item.get("note_card")) if isinstance(note_item, dict) else {}
+        user = _as_dict(
+            _first_value(
+                note_card.get("user"),
+                note_card.get("user_info"),
+                note_card.get("userInfo"),
+                note_card.get("author"),
+            )
         )
-        user = note_card.get("user", {}) if isinstance(note_card, dict) else {}
-        interact_info = (
-            note_card.get("interact_info", {}) if isinstance(note_card, dict) else {}
+        interact_info = _as_dict(
+            _first_value(note_card.get("interact_info"), note_card.get("interactInfo"))
         )
 
         images: list[str] = []
-        image_list = (
-            note_card.get("image_list", []) if isinstance(note_card, dict) else []
-        )
+        image_list = _first_value(note_card.get("image_list"), note_card.get("imageList"), [])
         if isinstance(image_list, list):
             for image in image_list:
                 if not isinstance(image, dict):
                     continue
-                info_list = image.get("info_list", [])
+                info_list = _first_value(image.get("info_list"), image.get("infoList"), [])
                 if not isinstance(info_list, list):
                     continue
                 chosen_url = ""
@@ -227,7 +275,7 @@ class XiaohongshuClient:
                     images.append(chosen_url)
 
         video_url = ""
-        video = note_card.get("video", {}) if isinstance(note_card, dict) else {}
+        video = _as_dict(note_card.get("video"))
         if isinstance(video, dict):
             media = video.get("media", {})
             if isinstance(media, dict):
@@ -244,19 +292,21 @@ class XiaohongshuClient:
         return {
             "success": True,
             "data": {
-                "id": note_item.get("id", note_id),
-                "title": note_card.get("title") or note_card.get("display_title", ""),
-                "desc": note_card.get("desc", ""),
-                "type": note_card.get("type", ""),
-                "nickname": user.get("nickname", ""),
-                "user_id": user.get("user_id", ""),
+                "id": _first_text(
+                    note_item.get("id"), note_card.get("note_id"), note_card.get("noteId"), note_id
+                ),
+                "title": _first_text(note_card.get("title"), note_card.get("display_title"), note_card.get("displayTitle")),
+                "desc": _first_text(note_card.get("desc"), note_card.get("description")),
+                "type": _first_text(note_card.get("type"), note_card.get("note_type"), note_card.get("noteType")),
+                "nickname": _first_text(user.get("nickname"), user.get("nick_name"), user.get("nickName")),
+                "user_id": _first_text(user.get("user_id"), user.get("userId"), user.get("id")),
                 "interact_info": {
-                    "liked_count": interact_info.get("liked_count", "0"),
-                    "collected_count": interact_info.get("collected_count", "0"),
-                    "comment_count": interact_info.get("comment_count", "0"),
-                    "share_count": interact_info.get("share_count", "0"),
+                    "liked_count": _first_text(interact_info.get("liked_count"), interact_info.get("likedCount"), "0"),
+                    "collected_count": _first_text(interact_info.get("collected_count"), interact_info.get("collectedCount"), "0"),
+                    "comment_count": _first_text(interact_info.get("comment_count"), interact_info.get("commentCount"), "0"),
+                    "share_count": _first_text(interact_info.get("share_count"), interact_info.get("shareCount"), "0"),
                 },
-                "time": note_item.get("time", note_card.get("time", 0)),
+                "time": _first_value(note_item.get("time"), note_card.get("time"), note_card.get("timestamp"), 0),
                 "images": images,
                 "video_url": video_url,
             },

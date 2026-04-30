@@ -84,7 +84,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_note",
-            description="获取小红书笔记详情（精简版）。返回标题、正文、作者、互动统计、发布时间及图片/视频链接。",
+            description="获取小红书笔记详情（精简版）。返回标题、正文、作者、互动统计、发布时间及图片/视频链接。会优先复用搜索阶段写入的 xiaohongshu-cli xsec_token 缓存，也可显式传入 xsec_token。",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -97,6 +97,16 @@ async def list_tools() -> list[Tool]:
                         "enum": ["image", "video"],
                         "default": "image",
                         "description": "笔记类型：image=图文笔记, video=视频笔记。如果不确定类型，默认使用 image",
+                    },
+                    "xsec_token": {
+                        "type": "string",
+                        "default": "",
+                        "description": "可选安全令牌。通常来自 search_notes 返回的 xsec_token；不传时会复用 xiaohongshu-cli 缓存。",
+                    },
+                    "xsec_source": {
+                        "type": "string",
+                        "default": "",
+                        "description": "可选安全来源。搜索结果通常为 pc_search；不传时由 xiaohongshu-cli 决定默认值或读取缓存。",
                     },
                 },
                 "required": ["note_id"],
@@ -312,12 +322,18 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
                     )
 
                 note_type = arguments.get("note_type", "image")
+                xsec_token = arguments.get("xsec_token", "")
+                xsec_source = arguments.get("xsec_source", "")
 
                 # Call appropriate API based on note type
                 if note_type == "video":
-                    result = await client.get_note_video(note_id)
+                    result = await client.get_note_video(
+                        note_id, xsec_token=xsec_token, xsec_source=xsec_source
+                    )
                 else:
-                    result = await client.get_note_image(note_id)
+                    result = await client.get_note_image(
+                        note_id, xsec_token=xsec_token, xsec_source=xsec_source
+                    )
 
                 # Format response
                 return [

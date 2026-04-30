@@ -116,6 +116,7 @@ uv sync --locked
 
 - 必填参数：`keyword`
 - 可选参数：`page`、`sort`、`note_type`
+- 返回结果会保留每条笔记的 `xsec_token` / `xsec_source`，并自动写入 `xiaohongshu-cli` 的本地 token 缓存，供后续 `get_note` 复用。
 
 ### `search_note_suggestions`
 
@@ -129,7 +130,9 @@ uv sync --locked
 获取某条笔记的精简详情。
 
 - 必填参数：`note_id`
-- 可选参数：`note_type`
+- 可选参数：`note_type`、`xsec_token`、`xsec_source`
+- 默认会调用 `xiaohongshu-cli` 的 `get_note_detail()`，优先使用显式传入的 `xsec_token`，其次使用 `search_notes` 写入的 CLI token 缓存，最后由 CLI 自行尝试 HTML fallback。
+- 如果刚从 `search_notes` 拿到结果，建议把对应的 `xsec_token` / `xsec_source` 一并传入；不传也会尽量复用 CLI 缓存。
 
 ### `get_note_comments`
 
@@ -187,7 +190,8 @@ uv sync --locked
 
 ## 一些已知问题和提示
 
-- 有时候小红书会要求进行人类验证，导致检索失败。此时让Agent简单地再次尝试调用一次同一个工具就好。
+- 有时候小红书会要求进行人类验证，导致检索失败。此时需要先在浏览器完成验证，再用 `set_cookies` 刷新 Cookie。
+- 获取笔记详情时，优先通过 `search_notes` 获得该笔记的 `xsec_token`，再调用 `get_note`。MCP 会复用 `xiaohongshu-cli` 的 token 缓存，但不会自行绕过验证码或重写 CLI 的风控逻辑。
 
 ## 项目文件
 
@@ -210,7 +214,7 @@ xiaohongshu/
 ## 未来可能支持的功能
 
 - [ ] 扫码登录
-- [ ] 在触发人类验证时自动重试
+- [ ] 在触发人类验证时提供更清晰的浏览器验证与 Cookie 刷新提示
 
 ## 致谢
 
